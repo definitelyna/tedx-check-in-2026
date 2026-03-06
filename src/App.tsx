@@ -10,8 +10,9 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { Search, Clock, Trash2 } from "lucide-react";
+import { Search, Clock, Trash2, Plus } from "lucide-react";
 import { CSVUpload } from "./components/CSVUpload";
+import { AddAttendeeModal } from "./components/AddAttendeeModal";
 
 function App() {
   const [attendees, setAttendees] = useState<Attendee[]>([]);
@@ -19,6 +20,7 @@ function App() {
   const [qrBuffer, setQrBuffer] = useState("");
   const [lastScanTime, setLastScanTime] = useState(0);
   const [notification, setNotification] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const qrInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -153,7 +155,7 @@ function App() {
     const query = searchQuery.toLowerCase();
     return (
       attendee.name.toLowerCase().includes(query) ||
-      attendee.email.toLowerCase().includes(query)
+      (attendee.email?.toLowerCase().includes(query) ?? false)
     );
   });
 
@@ -185,6 +187,14 @@ function App() {
         </div>
       )}
 
+      <AddAttendeeModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        attendees={attendees}
+        onAttendeeAdded={() => {}}
+        showNotification={showNotification}
+      />
+
       <div className="container mx-auto px-4 py-8">
         <div className="bg-gray-900 rounded-xl shadow-2xl overflow-hidden border border-red-600">
           <div className="bg-gradient-to-r from-black to-red-950 px-8 py-8 border-b border-red-600">
@@ -209,15 +219,24 @@ function App() {
           <div className="p-8">
             <CSVUpload />
 
-            <div className="mb-8 relative mt-8">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search by name or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-red-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
-              />
+            <div className="mb-8 flex gap-3 mt-8">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-red-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                />
+              </div>
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="px-4 py-3 bg-red-600 hover:bg-red-700 rounded-lg text-white font-semibold flex items-center gap-2 transition-colors"
+                title="Add new attendee"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
             </div>
 
             <div className="overflow-x-auto">
@@ -284,7 +303,7 @@ function App() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-400">
-                            {attendee.email}
+                            {attendee.email || '—'}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

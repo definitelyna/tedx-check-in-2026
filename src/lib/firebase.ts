@@ -17,8 +17,8 @@ export const db = getFirestore(app);
 export interface Attendee {
   id: string;
   name: string;
-  email: string;
-  qr_code: string;
+  email?: string | null;
+  qr_code?: string | null;
   checked_in: boolean;
   checked_in_at: string | null;
   ticket_number: string;
