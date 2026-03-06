@@ -7,9 +7,10 @@ import {
   getDocs,
   where,
   updateDoc,
+  deleteDoc,
   doc,
 } from "firebase/firestore";
-import { Search, Clock } from "lucide-react";
+import { Search, Clock, Trash2 } from "lucide-react";
 import { CSVUpload } from "./components/CSVUpload";
 
 function App() {
@@ -111,6 +112,20 @@ function App() {
     } catch (error) {
       console.error("Error updating check-in:", error);
       showNotification("Error updating status", "error");
+    }
+  };
+
+  const deleteAttendee = async (attendee: Attendee) => {
+    if (!confirm(`Are you sure you want to delete ${attendee.name}?`)) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, "attendees", attendee.id));
+      showNotification(`${attendee.name} deleted successfully!`, "success");
+    } catch (error) {
+      console.error("Error deleting attendee:", error);
+      showNotification("Error deleting attendee", "error");
     }
   };
 
@@ -224,13 +239,16 @@ function App() {
                     <th className="px-6 py-4 text-left text-xs font-bold text-red-400 uppercase tracking-wider">
                       Check-in Time
                     </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-red-400 uppercase tracking-wider">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-gray-900 divide-y divide-gray-800">
                   {filteredAttendees.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={6}
                         className="px-6 py-12 text-center text-gray-500"
                       >
                         {searchQuery
@@ -280,6 +298,15 @@ function App() {
                           ) : (
                             <span className="text-sm text-gray-600">—</span>
                           )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button
+                            onClick={() => deleteAttendee(attendee)}
+                            className="text-red-500 hover:text-red-400 transition-colors"
+                            title="Delete attendee"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </td>
                       </tr>
                     ))
