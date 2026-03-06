@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { db, type Attendee } from "./lib/firebase";
 import {
   collection,
@@ -22,6 +22,7 @@ function App() {
   const [notification, setNotification] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const qrInputRef = useRef<HTMLInputElement>(null);
+  const handleCheckInRef = useRef<(qrCode: string) => Promise<void>>();
 
   useEffect(() => {
     const attendeesRef = collection(db, "attendees");
@@ -56,7 +57,46 @@ function App() {
     }
   }, []);
 
-  const handleCheckIn = async (qrCode: string) => {
+  useEffect(() => {
+    // Global keydown listener to capture QR scanner input
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Only capture if not typing in another input/textarea
+      const activeElement = document.activeElement as HTMLElement;
+      if (
+        activeElement &&
+        (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') &&
+        activeElement !== qrInputRef.current
+      ) {
+        return;
+      }
+
+      const currentTime = Date.now();
+
+      if (e.key === 'Enter') {
+        if (qrBuffer.trim()) {
+          handleCheckInRef.current?.(qrBuffer.trim());
+          setQrBuffer('');
+        }
+        setLastScanTime(currentTime);
+        return;
+      }
+
+      if (currentTime - lastScanTime > 100) {
+        setQrBuffer('');
+      }
+
+      // Only add printable characters
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        setQrBuffer((prev) => prev + e.key);
+        setLastScanTime(currentTime);
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [qrBuffer, lastScanTime]);
+
+  const handleCheckIn = useCallback(async (qrCode: string) => {
     try {
       const attendeesRef = collection(db, "attendees");
       const q = query(attendeesRef, where("qr_code", "==", qrCode));
@@ -88,7 +128,7 @@ function App() {
       console.error("Error processing check-in:", error);
       showNotification("Error processing check-in", "error");
     }
-  };
+  }, []);
 
   const showNotification = (
     message: string,
@@ -97,6 +137,11 @@ function App() {
     setNotification(message);
     setTimeout(() => setNotification(null), 3000);
   };
+
+  // Update the handleCheckInRef whenever handleCheckIn changes
+  useEffect(() => {
+    handleCheckInRef.current = handleCheckIn;
+  }, [handleCheckIn]);
 
   const toggleCheckIn = async (attendee: Attendee) => {
     try {
@@ -131,26 +176,6 @@ function App() {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const currentTime = Date.now();
-
-    if (e.key === "Enter") {
-      if (qrBuffer.trim()) {
-        handleCheckIn(qrBuffer.trim());
-        setQrBuffer("");
-      }
-      setLastScanTime(currentTime);
-      return;
-    }
-
-    if (currentTime - lastScanTime > 100) {
-      setQrBuffer("");
-    }
-
-    setQrBuffer((prev) => prev + e.key);
-    setLastScanTime(currentTime);
-  };
-
   const filteredAttendees = attendees.filter((attendee) => {
     const query = searchQuery.toLowerCase();
     return (
@@ -168,9 +193,9 @@ function App() {
         type="text"
         value={qrBuffer}
         onChange={() => {}}
-        onKeyPress={handleKeyPress}
         className="absolute opacity-0 pointer-events-none"
         aria-label="QR Scanner Input"
+        tabIndex={-1}
       />
 
       {notification && (
