@@ -174,7 +174,7 @@ function App() {
         <div className="bg-gray-900 rounded-xl shadow-2xl overflow-hidden border border-red-600">
           <div className="bg-gradient-to-r from-black to-red-950 px-8 py-8 border-b border-red-600">
             <h1 className="text-4xl font-bold text-white mb-3">
-              TEDx Event Check-in
+              TEDxISPH 2026 Event Check-in
             </h1>
             <div className="flex items-center gap-6 text-red-100">
               <span className="flex items-center gap-2 text-lg">
